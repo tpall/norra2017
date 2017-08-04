@@ -26,3 +26,19 @@ rbind.SpatialLines.list <- function (..., makeUniqueIDs = TRUE) {
     ll = makeUniqueIDs(ll)
   SpatialLines(ll, proj4string = CRS(proj4string(dots[[1]])))
 }
+
+
+rbind.SpatialPointsDataFrame.list <- function (...){
+  dots = list(...)
+  
+  # If input has length 1 and is plausibly a list, then unnest it
+  if(length(dots) == 1){
+    dots <- unlist(dots, recursive = FALSE)
+  }
+  
+  names(dots) <- NULL
+  sp = do.call(rbind, lapply(dots, function(x) as(x, "SpatialPoints")))
+  df = do.call(rbind, lapply(dots, function(x) x@data))
+  SpatialPointsDataFrame(sp, df, coords.nrs = dots[[1]]@coords.nrs)
+}
+
