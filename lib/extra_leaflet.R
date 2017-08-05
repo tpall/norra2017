@@ -25,12 +25,7 @@ tracks$trip  <- c("Geilo-Nedra Grøndalsvatne (Rallarvegen)",
                   "Kvanndal-Voss")
 
 merge_gpx <- function(gpxfiles, writetofile = TRUE, pathtosave = "./", activity = "Cycling") {
-  
-  # # Do nothing with single tracks
-  # if(length(gpxfiles) == 1){
-  #   return(gpxfiles)
-  # }
-  
+
   # Input files
   input <- paste("-i gpx -f", gpxfiles, collapse = " ")
   
@@ -46,11 +41,12 @@ merge_gpx <- function(gpxfiles, writetofile = TRUE, pathtosave = "./", activity 
   # Compose gpsbabel command
   gpsbabel_cmd <- sprintf("gpsbabel -t %s -x track,merge,title='COMBINED LOG' -o gpx -F %s", input, output)
   
-  # 
+  # Do merging and output merged file name or gpx string of merged tracks
   gpxstring <- system(gpsbabel_cmd, intern = !writetofile, ignore.stderr = TRUE)
   
+  # Parse output
   if(!writetofile){
-    # Returns xml as character vector
+    # Returns xml as character vector, collapse rows into single string
     gpxstring <- paste(gpxstring, collapse = "")
   } else {
     # Returns file name of merged data
