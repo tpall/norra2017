@@ -21,7 +21,7 @@ extract_date <- function(gpxfile){
 #' @param writetofile TRUE, whether direct output to a file or into character vector. 
 #' @param pathtosave "./", path where to save merged output, when writetofile is TRUE.
 #' @param activity "Cycling", activity to add to file name, when writetofile is TRUE.
-#' @return Joined/merged track in gpx format.
+#' @return A character vector. When `writetofile` is TRUE, merged file is saved to directory specified by `pathtosave` and function returns file name of the joined/merged track in gpx format. If `writetofile` is FALSE, gpx xml string is returned.  
 #' @examples 
 #' \dontrun{
 #' gpxfiles <- list.files("inst/gpx/", full.names = TRUE)
@@ -42,8 +42,9 @@ merge_gpx <- function(gpxfiles, writetofile = TRUE, pathtosave = "./", activity 
   # Write to file
   if(writetofile){
     # Create date id from unique dates
-    date_id <- lapply(gpxfiles, extract_date)
-    date_id <- paste0(unique(unlist(date_id)), collapse = "_")
+    date_id <- vapply(gpxfiles, extract_date, character(1))
+    date_id <- paste0(unique(date_id), collapse = "_")
+    # Output file name with path
     output <- file.path(pathtosave, sprintf("Merged_%s_%s.gpx", date_id, activity))
   }
   
