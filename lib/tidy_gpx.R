@@ -23,15 +23,6 @@ tidy_gpx <- function(xml) {
   time <- xml2::xml_text(time)
   time <- readr::parse_datetime(time)
   
-  # Extensions
-  trk_nodes <- xml2::xml_find_all(trk, "extensions")
-  trk_nodes <- purrr::map(trk_nodes, xml2::xml_contents)
-  extensions <- purrr::map(trk_nodes, xml2::xml_double) 
-  extensions <- do.call(rbind, extensions) 
-  extensions <- tibble::as_tibble(extensions) 
-  extensions <- dplyr::mutate_all(extensions, as.numeric)
-  colnames(extensions) <- xml2::xml_name(trk_nodes[[1]])
-  
   # Create data_frame
-  dplyr::bind_cols(trkpt, tibble::tibble(ele, time), extensions)
+  dplyr::bind_cols(trkpt, tibble::tibble(ele, time))
 }
