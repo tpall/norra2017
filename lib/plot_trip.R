@@ -1,7 +1,7 @@
 
 
 # plot_trip2 function -----------------------------------------------------
-
+#' @param gpx URL to your GPX file or the GPX itself
 plot_trip2 <- function(gpx, trip = NULL, popupdata = NULL){
   
   # Thunderforest base url
