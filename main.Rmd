@@ -68,14 +68,16 @@ Vot nii lihtne...
 
 ```{r days-dist}
 # Combine days tracks into lists for each date
-dtrk <- select(tracks, date, track) %>% 
+dtrk <- select(tracks, date, track, track_points) %>% 
   group_by(date) %>% 
-  do(days_trk = as.list(.$track)) %>% 
+  do(days_trk = as.list(.$track),
+     days_trk_points = as.list(.$track_points)) %>% 
   ungroup()
 # Modified sp::rbind.SpatialLines function to use lists as input
 source("lib/rbind_SpatialLines_list.R")
 # Merge days distance using tidyverse approach
-dtrk <- mutate(dtrk, days_trk = map(days_trk, rbind.SpatialLines.list))
+dtrk <- mutate(dtrk, days_trk = map(days_trk, rbind.SpatialLines.list),
+               days_trk_points = map(days_trk_points, rbind.SpatialPointsDataFrame.list))
 ```
 
 Legendi jaoks panen kokku igapäevased teekonna algus- ja lõpp-punktid.
@@ -155,7 +157,7 @@ plot_trip <- function(data, trip, popupdata) {
     addProviderTiles("Esri.WorldImagery", group = "Satelliit", options = providerTileOptions(detectRetina = T)) %>%
     
     # Add legend
-    addLegend(position = 'bottomright',opacity = 0.4, 
+    addLegend(position = 'bottomright', opacity = 0.4, 
               colors = 'blue', 
               labels = trip,
               title = 'Norra 2017')
@@ -249,16 +251,18 @@ dtrk$trip_leaf[[8]]
 
 ## 
 
-```{r tidy-gpx-function, comment=NA}
+```{r tidy-gpx-function, comment=NA, include=FALSE}
 source("lib/tidy_gpx.R")
 tidy_gpx
 ```
 
-```{r tidy-gpx}
+```{r tidy-gpx, include=FALSE}
 tracks <- mutate(tracks, gpx = map(xml, tidy_gpx))
 ```
 
-```{r}
-
+```{r eval=FALSE}
+dtrk$days_trk_points[[1]] %>% coordinates
+dtrk$days_trk_points[[1]]$ele
+dtrk$days_trk_points[[1]]$time
 ```
 
