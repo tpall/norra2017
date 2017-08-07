@@ -50,14 +50,19 @@
 
     var el = L.control.elevation();
     el.addTo(map);
-    var g=new L.GPX("data/Move_2017_07_12_11_47_34_Cycling.gpx", {async: true});
+    
+    var g = new L.GPX("data/Move_2017_07_12_11_47_34_Cycling.gpx", {async: true});
+    
     g.on('loaded', function(e) {
 		  		map.fitBounds(e.target.getBounds());
 		});
+		
 		g.on("addline",function(e){
 			el.addData(e.line);
 		});
+		
 		g.addTo(map);
+		
 		map.addLayer(service);
     
     </script>
