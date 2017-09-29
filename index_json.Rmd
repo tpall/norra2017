@@ -3,7 +3,7 @@ title: "Using elevation plugin with R leaflet"
 output: html_document
 ---
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.2/d3.min.js" charset="utf-8"></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = T)
@@ -52,7 +52,6 @@ mutate(tracks, is_geojson = map_lgl(geojson, geojson_lint))$is_geojson
 
 
 ```{r leaflet}
-
 # Thunderforest base url
   thunderforest_link_template <- "https://{s}.tile.thunderforest.com/%s/{z}/{x}/{y}.png?apikey=%s"
 bb <- tracks$bb[[1]]
@@ -67,7 +66,10 @@ m <- leaflet() %>%
     addProviderTiles("Stamen.Terrain", group = "Pinnavormid", options = providerTileOptions(detectRetina = T)) %>%
     addProviderTiles("OpenStreetMap.Mapnik", group = "Sõiduteed", options = providerTileOptions(detectRetina = T)) %>%
     addProviderTiles("Esri.WorldImagery", group = "Satelliit", options = providerTileOptions(detectRetina = T))
+```
 
+
+```{r}
 elevationPlugin <- htmlDependency("Leaflet.elevation", "0.0.4",
       src = normalizePath("inst/htmlwidgets/lib/elevation/"),
       script = "leaflet.elevation-0.0.4.src.js",
@@ -99,27 +101,9 @@ m <- m %>%
 		      }).addTo(this);
 
 }', data = tracks$geojson[[1]])
+```
 
-# # Add legend
-#   if(!is.null(trip)){
-#     m <- m %>% addLegend(position = 'bottomright', 
-#                          opacity = 0.4, 
-#                          colors = 'blue', 
-#                          labels = trip,
-#                          title = 'Norra 2017')}
-#   
-#   # Add photo markers
-#   if(!is.null(popupdata)){
-#     m <- m %>% addAwesomeMarkers(lng = popupdata$lon,
-#                                  lat = popupdata$lat,
-#                                  popup = popupdata$popup,
-#                                  popupOptions = popupOptions(closeButton = FALSE, 
-#                                                              maxWidth = 500,
-#                                                              closeOnClick = TRUE),
-#                                  icon = icon_fa_camera,
-#                                  group = 'Fotod')
-#   }
-
+```{r}
 m %>% addLayersControl(position = 'bottomright',
                          baseGroups = c("Topograafiline", 
                                         "Sõiduteed", 
@@ -132,6 +116,5 @@ m %>% addLayersControl(position = 'bottomright',
     
     # Add a fullscreen control button
     addFullscreenControl()
-
 ```
 
