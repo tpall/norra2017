@@ -1,0 +1,137 @@
+---
+title: "Using elevation plugin with R leaflet"
+output: html_document
+---
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.2/d3.min.js" charset="utf-8"></script>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+```
+
+
+```{r munge}
+library(tidyverse)
+library(leaflet)
+library(leaflet.extras)
+library(jsonlite)
+library(htmltools)
+library(htmlwidgets)
+source("lib/tidy_gpx.R")
+source("lib/extract_date.R")
+
+tracks <- data_frame(gpx_files = list.files("data/", full.names = T))
+tracks <- mutate(tracks, date = extract_date(gpx_files),
+                 gpx_strings = map(gpx_files, read_file),
+                 gpx_df = map(gpx_strings, tidy_gpx))
+
+tracks <- tracks %>%
+  group_by(date) %>%
+  do(gpx_df = bind_rows(.$gpx_df)) %>%
+  ungroup()
+
+tracks$trip  <- c("Geilo-Nedra Grøndalsvatne (Rallarvegen)",
+                  "Nedra Grøndalsvatne-Voss-Dalavegen",
+                  "Dalavegen-Stanghelle-Bergen (train)-Lyseklostervegen",
+                  "Lyseklostervegen-Buavågen",
+                  "Buavågen-Saudavegen",
+                  "Saudavegen-Sauda-Håra",
+                  "Håra-Odda-Utne",
+                  "Kvanndal-Voss")
+
+tracks <- mutate(tracks, gpx_df = map(gpx_df, ~select(.x, lon, lat, ele)))
+tracks <- mutate(tracks, bb = map(gpx_df, ~summarise_at(.x, c("lon", "lat"), c("min", "max"))))
+tracks <- mutate(tracks, coordinates = map(gpx_df, ~toJSON(.x, dataframe = "values")))
+tracks <- mutate(tracks, geojson = sprintf('{"type":"Feature","geometry":{"type":"LineString","coordinates":%s},"properties":null}', coordinates))
+tracks <- mutate(tracks, geojson = map(geojson, ~toJSON(fromJSON(.x), auto_unbox = T)))
+
+# Check if correct geojson objects
+library(geojsonlint)
+mutate(tracks, is_geojson = map_lgl(geojson, geojson_lint))$is_geojson
+```
+
+
+```{r leaflet}
+
+# Thunderforest base url
+  thunderforest_link_template <- "https://{s}.tile.thunderforest.com/%s/{z}/{x}/{y}.png?apikey=%s"
+bb <- tracks$bb[[1]]
+m <- leaflet() %>%
+  
+  fitBounds(lng1 = bb[[1]], lat1 = bb[[2]], lng2 = bb[[3]], lat2 = bb[[4]]) %>%
+  
+  # Add tiles
+    addTiles(sprintf(thunderforest_link_template, "landscape", Sys.getenv("THUNDERF_APIKEY")), group = "Topograafiline") %>%
+    addTiles(sprintf(thunderforest_link_template, "cycle", Sys.getenv("THUNDERF_APIKEY")), group = "Rattateed") %>%
+    addTiles(sprintf(thunderforest_link_template, "outdoors", Sys.getenv("THUNDERF_APIKEY")), group = "Matka- ja terviserajad") %>%
+    addProviderTiles("Stamen.Terrain", group = "Pinnavormid", options = providerTileOptions(detectRetina = T)) %>%
+    addProviderTiles("OpenStreetMap.Mapnik", group = "Sõiduteed", options = providerTileOptions(detectRetina = T)) %>%
+    addProviderTiles("Esri.WorldImagery", group = "Satelliit", options = providerTileOptions(detectRetina = T))
+
+elevationPlugin <- htmlDependency("Leaflet.elevation", "0.0.4",
+      src = normalizePath("inst/htmlwidgets/lib/elevation/"),
+      script = "leaflet.elevation-0.0.4.src.js",
+      stylesheet = "leaflet.elevation-0.0.4.css")
+
+# A function that takes a plugin htmlDependency object and adds
+# it to the map. This ensures that however or whenever the map
+# gets rendered, the plugin will be loaded into the browser.
+registerPlugin <- function(map, plugin) {
+  map$dependencies <- c(map$dependencies, list(plugin))
+  map
+}
+
+m <- m %>%
+  # Register plugins on this map instance
+  registerPlugin(elevationPlugin) %>%
+  # Add your custom JS logic here. The `this` keyword
+  # refers to the Leaflet (JS) map object.
+  onRender('function(el, x, data) {
+
+          var elev = L.control.elevation({
+              theme: "lime-theme",
+              width: 300
+          });
+              elev.addTo(this);
+          
+          L.geoJson(data, {
+		      onEachFeature: elev.addData.bind(elev)
+		      }).addTo(this);
+
+}', data = tracks$geojson[[1]])
+
+# # Add legend
+#   if(!is.null(trip)){
+#     m <- m %>% addLegend(position = 'bottomright', 
+#                          opacity = 0.4, 
+#                          colors = 'blue', 
+#                          labels = trip,
+#                          title = 'Norra 2017')}
+#   
+#   # Add photo markers
+#   if(!is.null(popupdata)){
+#     m <- m %>% addAwesomeMarkers(lng = popupdata$lon,
+#                                  lat = popupdata$lat,
+#                                  popup = popupdata$popup,
+#                                  popupOptions = popupOptions(closeButton = FALSE, 
+#                                                              maxWidth = 500,
+#                                                              closeOnClick = TRUE),
+#                                  icon = icon_fa_camera,
+#                                  group = 'Fotod')
+#   }
+
+m %>% addLayersControl(position = 'bottomright',
+                         baseGroups = c("Topograafiline", 
+                                        "Sõiduteed", 
+                                        "Rattateed", 
+                                        "Matka- ja terviserajad",  
+                                        "Satelliit", 
+                                        "Pinnavormid"),
+                         overlayGroups = c("Rattamarsruut", "Fotod"),
+                         options = layersControlOptions(collapsed = TRUE)) %>%
+    
+    # Add a fullscreen control button
+    addFullscreenControl()
+
+```
+

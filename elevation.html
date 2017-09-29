@@ -49,21 +49,26 @@
     }).addTo(map);
 
     var el = L.control.elevation();
-    el.addTo(map);
+        el.addTo(map);
     
-    var g = new L.GPX("data/Move_2017_07_12_11_47_34_Cycling.gpx", {async: true});
+    var g = new L.GPX("data/Move_2017_07_12_11_47_34_Cycling.gpx", 
+    {async: true,
+     marker_options: {
+        startIconUrl: 'https://raw.githubusercontent.com/mpetazzoni/leaflet-gpx/master/pin-icon-start.png',
+        endIconUrl: 'https://raw.githubusercontent.com/mpetazzoni/leaflet-gpx/master/pin-icon-end.png',
+        shadowUrl: 'https://raw.githubusercontent.com/mpetazzoni/leaflet-gpx/master/pin-shadow.png'
+        }
+    });
     
     g.on('loaded', function(e) {
 		  		map.fitBounds(e.target.getBounds());
 		});
 		
-		g.on("addline",function(e){
+		g.on('addline', function(e){
 			el.addData(e.line);
 		});
 		
 		g.addTo(map);
-		
-		map.addLayer(service);
     
     </script>
   
