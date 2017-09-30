@@ -100,19 +100,6 @@ merge_gpx <- function(gpxfiles, writetofile = TRUE, pathtosave = "./", activity 
 }
 ```
 
-
-<!-- GPX failidest impordime GPS andmed GIS formaati kasutades `readOGR` funktsiooni paketist `rgdal`. -->
-<!-- Failinimedest võtame ka radade kuupäevad, et need hiljem iga päeva konkateneerida. -->
-<!-- Alternatiivselt impordime GPX formadi ka xml formaadis R-i kasutades `read_xml` käsku paketist `xml2`. -->
-<!-- XML formaadis GPX andmed formaadime pikka tabelisse kasutades spetsiaalselt selleks loodud skripti. -->
-
-
-<!-- `readOGR` vajab importimiseks andmekihi spetsifitseerimist. -->
-<!-- Failis olevaid andmekihte saab vaadata käsuga `ogrListLayers`. -->
-<!-- __Rajajoonte__ joonistamiseks sobib kiht "tracks", __rajapunktid__ saab kätte kihist "track_points". -->
-<!-- Samas, "track_points" sisaldab lisaks koordinaatidele ka näiteks kõrgusinfo andmeid. -->
-<!-- Imporditud rajajooned on `SpatialLines` klassi objektid. -->
-
 Alustuseks moodustan gpx faili nimedest ja nende nimes olevatest kuupäevadest `data_frame`-i.
 Seejärel grupeerin failinimed kuupäevade järgi listidesse ja ühendan omavahel otsapidi iga kuupäeva päevateekonnad kasutades `gpsbabel` programmi.
 Viimaks lisan legendi jaoks tabelisse ka 'käsitsi' kokku pandud päevateekondade algus- ja lõpppunktid.
@@ -140,45 +127,6 @@ tracks$trip  <- c("Geilo-Nedra Grøndalsvatne (Rallarvegen)",
                   "Kvanndal-Voss")
 ```
 
-<!-- Mõnel päeval salvestasin ma mitu träkki: näiteks enne lõunapausi ja peale lõunapausi. -->
-<!-- Liidame need träkid päevakaupa kokku.  -->
-<!-- Selleks kasutame `rbind.SpatialLines` funktsiooni paketist `sp`. -->
-<!-- Originaalis on selle funktsiooni argumentideks üksikud `SpatialLines` objektid, mis siis funktsioonis kohe listiks konverteeritakse. -->
-<!-- Selleks aga, et neid üksikuid träkke _tidyverse_ stiilis tabelis modifitseerida ja summeerida (kokku liita siis antud juhul), peaks `rbind.SpatialLines` saama hakkama ka sellisel juhul, kui argumendiks on objektide list. -->
-<!-- Selleks lisasin `rbind.SpatialLines` (https://github.com/edzer/sp/blob/master/R/rbind.R) funktsiooni kolm rida, mis kontrollib kas listiks konverteeritud objekti pikkus on 1 (kui list pikkusega N konverteeritakse listiks, siis saadud objekti pikkus on 1).  -->
-<!-- Kui on 1, siis funktsioon `unlist`-ib selle objekti mitte-rekursiivselt, nii et saame tagasi algse listi. -->
-<!-- Vot nii lihtne... -->
-
-<!-- ```{r days-dist} -->
-<!-- # Combine days tracks into lists for each date -->
-<!-- dtrk <- select(tracks, date, track, track_points) %>%  -->
-<!--   group_by(date) %>%  -->
-<!--   do(days_trk = as.list(.$track), -->
-<!--      days_trk_points = as.list(.$track_points)) %>%  -->
-<!--   ungroup() -->
-<!-- # Modified sp::rbind.SpatialLines function to use lists as input -->
-<!-- source("lib/rbind_SpatialLines_list.R") -->
-<!-- # Merge days distance using tidyverse approach -->
-<!-- dtrk <- mutate(dtrk, days_trk = map(days_trk, rbind.SpatialLines.list), -->
-<!--                days_trk_points = map(days_trk_points, rbind.SpatialPointsDataFrame.list)) -->
-<!-- ``` -->
-
-<!-- Legendi jaoks panen kokku igapäevased teekonna algus- ja lõpp-punktid. -->
-
-<!-- ```{r add-trips} -->
-<!-- # Start and end points for days trips to be used in legend -->
-<!-- trip <- data_frame(date = dtrk$date, -->
-<!--            trip = c("Geilo-Nedra Grøndalsvatne (Rallarvegen)", -->
-<!--                     "Nedra Grøndalsvatne-Voss-Dalavegen", -->
-<!--                     "Dalavegen-Stanghelle-Bergen (train)-Lyseklostervegen", -->
-<!--                     "Lyseklostervegen-Buavågen", -->
-<!--                     "Buavågen-Saudavegen", -->
-<!--                     "Saudavegen-Sauda-Håra", -->
-<!--                     "Håra-Odda-Utne", -->
-<!--                     "Kvanndal-Voss")) -->
-<!-- # Merge with tracks using dates -->
-<!-- dtrk <- left_join(dtrk, trip) -->
-<!-- ``` -->
 
 ### Arvutame summaarse tõusu ja laskumise iga päeva kohta
 
