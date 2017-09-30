@@ -1,5 +1,4 @@
 #' Get GPS track bounds from GPX
-#' @description Get GPS track bounds from GPX
 #' @param gpx URL to your GPX file or the GPX itself
 #' 
 get_gpx_bounds <- function(gpx_file) {

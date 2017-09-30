@@ -3,8 +3,6 @@ title: "Using elevation plugin with R leaflet"
 output: html_document
 ---
 
-<script src="inst/htmlwidgets/lib/d3/d3.js" type="text/javascript" charset="utf-8"></script>
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = T)
 ```
@@ -74,22 +72,17 @@ m <- leaflet() %>%
     addProviderTiles("OpenStreetMap.Mapnik", group = "Sõiduteed", options = providerTileOptions(detectRetina = T)) %>%
     addProviderTiles("Esri.WorldImagery", group = "Satelliit", options = providerTileOptions(detectRetina = T))
 ```
-<<<<<<< HEAD
 
 Javascript dependencies:
-=======
-
-
->>>>>>> a1e2b6fd6c674cfed8d336423103ff47df9cc1ee
 ```{r}
 elevationPlugin <- htmlDependency("Leaflet.elevation", "0.0.4",
-      src = normalizePath("inst/htmlwidgets/lib/elevation/"),
+      src = normalizePath("js/elevation/"),
       script = "leaflet.elevation-0.0.4.src.js",
       stylesheet = "leaflet.elevation-0.0.4.css")
 
-# d3Plugin <- htmlDependency("d3", "4.0",
-#                            src = normalizePath("inst/htmlwidgets/lib/d3/"),
-#                            script = "d3.js")
+d3Plugin <- htmlDependency("d3", "3.5.17",
+      src = normalizePath("js/d3/"),
+      script = "d3.js")
 
 # A function that takes a plugin htmlDependency object and adds
 # it to the map. This ensures that however or whenever the map
@@ -104,6 +97,7 @@ registerPlugin <- function(map, plugin) {
 ```{r}
 m <- m %>%
   # Register plugins on this map instance
+  registerPlugin(d3Plugin) %>% 
   registerPlugin(elevationPlugin) %>%
   # Add your custom JS logic here. The `this` keyword
   # refers to the Leaflet (JS) map object.
@@ -122,10 +116,8 @@ m <- m %>%
 }', data = tracks$geojson[[1]])
 ```
 
-<<<<<<< HEAD
-=======
+
 ```{r}
->>>>>>> a1e2b6fd6c674cfed8d336423103ff47df9cc1ee
 m %>% addLayersControl(position = 'bottomright',
                          baseGroups = c("Topograafiline", 
                                         "Sõiduteed", 

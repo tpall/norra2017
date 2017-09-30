@@ -236,12 +236,12 @@ plot_trip2 <- function(json, bb, trip = NULL, popupdata = NULL){
   
   ## JS plugins
   elevationPlugin <- htmlDependency("Leaflet.elevation", "0.0.4",
-      src = normalizePath("inst/htmlwidgets/lib/elevation/"),
+      src = normalizePath("js/elevation/"),
       script = "leaflet.elevation-0.0.4.src.js",
       stylesheet = "leaflet.elevation-0.0.4.css")
   
   d3Plugin <- htmlDependency("d3", "3.5.17",
-      src = normalizePath("inst/htmlwidgets/lib/d3/"),
+      src = normalizePath("js/d3/"),
       script = "d3.js")
   
   # Add data
