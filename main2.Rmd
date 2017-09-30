@@ -6,27 +6,19 @@ output: html_document
 <script src="inst/htmlwidgets/lib/d3/d3.js" type="text/javascript" charset="utf-8"></script>
 
 
-```{r, fig.cap="Ronimine meile meeldib! Ülo ja Intsu mõtisklevad möödunud päeva üle Håra lähedal laagris. Selja taga on kõigest natuke üle 60 km, aga 1260 tõusumeetrit. 17. juuli 2017.", out.width=600}
+```{r, fig.cap="Ronimine meile meeldib! Ülo ja Intsu mõtisklevad möödunud päeva üle Håra lähedal laagris. Selja taga on kõigest natuke üle 60 km, aga 1260 tõusumeetrit. 17. juuli 2017.", out.width=600, echo=FALSE}
 knitr::include_graphics("photos/20170717_222506.jpg")
 ```
 
+```{r opts, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
 
 ## Marsruut
 Norra rattamatk alguse ja lõpuga Tallinnast, 2017-07-10 kuni 2017-07-21.
 Auto ja laevaga Tallinn--Stockholm--Geilo ja tagasi 10-11. ja 20-21. juuli. 
 Ratastega Geilo--Voss ring 12-19. juuli.
-Rongiga Voss--Geilo.    
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE)
-library(tidyverse)
-library(viridis)
-library(stringr)
-library(leaflet)
-library(leaflet.extras) # fullscreen control button
-library(htmltools)
-library(htmlwidgets)
-```
+Rongiga Voss--Geilo.
 
 ## Träkkimine
 Jalgrattamarsruuti träkkisin Suunto Ambit 2 kellaga. 
@@ -50,73 +42,37 @@ Mõnel päeval salvestasin ma mitu träkki: näiteks enne lõunapausi ja peale l
 Liidan need träkid päevakaupa kokku.
 Selleks kasutan käsurea programmi `gpsbabel`, mille käivitamise ma pakendan R-i funktsiooni `merge_gpx`.
 
-```{r merge-gpx}
-# Extract date from file name
-extract_date <- function(gpxfile){
-  # Remove letters and punctuation from file name
-  datetime <- gsub("[a-zA-Z[:punct:]]", "", gpxfile)
-  # Parse datetime
-  datetime <- lubridate::ymd_hms(datetime)
-  # Extract date
-  date <- lubridate::date(datetime)
-  as.character(date)
-}
-
-# Join/merge GPX files
-merge_gpx <- function(gpxfiles, writetofile = TRUE, pathtosave = "./", activity = "Cycling") {
-  
-  # Input files
-  input <- paste("-i gpx -f", gpxfiles, collapse = " ")
-  
-  # Writes to stdout
-  output <- "-"
-  
-  # Write to file
-  if(writetofile){
-    # Create date id from unique dates
-    date_id <- vapply(gpxfiles, extract_date, character(1))
-    date_id <- paste0(unique(date_id), collapse = "_")
-    # Output file name with path
-    output <- file.path(pathtosave, sprintf("Merged_%s_%s.gpx", date_id, activity))
-  }
-  
-  # Compose gpsbabel command
-  gpsbabel_cmd <- sprintf("gpsbabel -t %s -x track,merge,title='COMBINED LOG' -o gpx -F %s", input, output)
-  
-  # Do merging and output merged file name or gpx string of merged tracks
-  gpxstring <- system(gpsbabel_cmd, intern = !writetofile, ignore.stderr = TRUE)
-  
-  # Parse output
-  if(!writetofile){
-    # Returns xml as character vector, collapse rows into single string
-    gpxstring <- paste(gpxstring, collapse = "")
-  } else {
-    # Returns file name of merged data
-    message(sprintf("Writing merged gpx track to %s", output))
-    gpxstring <- output
-  }
-  
-  return(gpxstring)
-}
+Laadime vajalikud library-d ja kaks abifunktsiooni.
+```{r libraries}
+library(tidyverse)
+library(viridis)
+library(stringr)
+library(leaflet)
+library(leaflet.extras) # fullscreen control button
+library(jsonlite)
+library(htmltools)
+library(htmlwidgets)
+source("lib/tidy_gpx.R")
+source("lib/extract_date.R")
 ```
 
 Alustuseks moodustan gpx faili nimedest ja nende nimes olevatest kuupäevadest `data_frame`-i.
-Seejärel grupeerin failinimed kuupäevade järgi listidesse ja ühendan omavahel otsapidi iga kuupäeva päevateekonnad kasutades `gpsbabel` programmi.
+Seejärel grupeerin failinimed kuupäevade järgi listidesse ja ühendan omavahel otsapidi iga kuupäeva päevateekonnad.
 Viimaks lisan legendi jaoks tabelisse ka 'käsitsi' kokku pandud päevateekondade algus- ja lõpppunktid.
 
 ```{r import-gpx-tracks}
-# List gpx files in data folder
-gpx_files <- list.files("data/", full.names = TRUE)
-# Extract date from gpx file name
-tracks <- data_frame(gpx_files) %>% 
-  mutate(date = extract_date(gpx_files))
-# Group gpx filenames by date and join days trips
-tracks <- tracks %>% 
-  group_by(date) %>% 
-  do(gpxstring = merge_gpx(.$gpx_files, writetofile = F)) %>% 
+## List gpx files in data folder
+tracks <- data_frame(gpx_files = list.files("data/", full.names = T))
+## Extract dates and convert gpx to dataframe
+tracks <- mutate(tracks, date = extract_date(gpx_files),
+                 gpx_strings = map(gpx_files, read_file),
+                 gpx_df = map(gpx_strings, tidy_gpx))
+
+tracks <- tracks %>%
+  group_by(date) %>%
+  do(gpx_df = bind_rows(.$gpx_df)) %>%
   ungroup()
 
-# Add manually start and end points for days trips to be used in legend
 tracks$trip  <- c("Geilo-Nedra Grøndalsvatne (Rallarvegen)",
                   "Nedra Grøndalsvatne-Voss-Dalavegen",
                   "Dalavegen-Stanghelle-Bergen (train)-Lyseklostervegen",
@@ -125,6 +81,14 @@ tracks$trip  <- c("Geilo-Nedra Grøndalsvatne (Rallarvegen)",
                   "Saudavegen-Sauda-Håra",
                   "Håra-Odda-Utne",
                   "Kvanndal-Voss")
+
+tracks <- mutate(tracks, gpx_df = map(gpx_df, ~select(.x, lon, lat, ele)))
+tracks <- mutate(tracks, bb = map(gpx_df, ~summarise_at(.x, c("lon", "lat"), c("min", "max"))))
+
+## Convert to json
+tracks <- mutate(tracks, coordinates = map(gpx_df, ~toJSON(.x, dataframe = "values")))
+tracks <- mutate(tracks, geojson = sprintf('{"type":"Feature","geometry":{"type":"LineString","coordinates":%s},"properties":null}', coordinates))
+tracks <- mutate(tracks, geojson = map(geojson, ~toJSON(fromJSON(.x), auto_unbox = T)))
 ```
 
 
