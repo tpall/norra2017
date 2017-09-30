@@ -3,7 +3,8 @@ title: "Matka GPS blogi interaktiivsele kaartile: Norra rattamatk 2017"
 output: html_document
 ---
 
-<script src="http://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+<script src="inst/htmlwidgets/lib/d3/d3.js" type="text/javascript" charset="utf-8"></script>
+
 
 ![Ronimine meile meeldib! Ülo ja Intsu mõtisklevad möödunud päeva üle Håra lähedal laagris. Selja taga on kõigest natuke üle 60 km, aga 1260 tõusumeetrit. 17. juuli 2017.](photos/20170717_222506.jpg)
 
