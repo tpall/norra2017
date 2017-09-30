@@ -6,7 +6,10 @@ output: html_document
 <script src="inst/htmlwidgets/lib/d3/d3.js" type="text/javascript" charset="utf-8"></script>
 
 
-![Ronimine meile meeldib! Ülo ja Intsu mõtisklevad möödunud päeva üle Håra lähedal laagris. Selja taga on kõigest natuke üle 60 km, aga 1260 tõusumeetrit. 17. juuli 2017.](photos/20170717_222506.jpg)
+```{r, fig.cap="Ronimine meile meeldib! Ülo ja Intsu mõtisklevad möödunud päeva üle Håra lähedal laagris. Selja taga on kõigest natuke üle 60 km, aga 1260 tõusumeetrit. 17. juuli 2017.", out.width=600}
+knitr::include_graphics("photos/20170717_222506.jpg")
+```
+
 
 ## Marsruut
 Norra rattamatk alguse ja lõpuga Tallinnast, 2017-07-10 kuni 2017-07-21.

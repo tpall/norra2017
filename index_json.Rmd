@@ -74,8 +74,13 @@ m <- leaflet() %>%
     addProviderTiles("OpenStreetMap.Mapnik", group = "Sõiduteed", options = providerTileOptions(detectRetina = T)) %>%
     addProviderTiles("Esri.WorldImagery", group = "Satelliit", options = providerTileOptions(detectRetina = T))
 ```
+<<<<<<< HEAD
 
 Javascript dependencies:
+=======
+
+
+>>>>>>> a1e2b6fd6c674cfed8d336423103ff47df9cc1ee
 ```{r}
 elevationPlugin <- htmlDependency("Leaflet.elevation", "0.0.4",
       src = normalizePath("inst/htmlwidgets/lib/elevation/"),
@@ -115,7 +120,12 @@ m <- m %>%
 		      }).addTo(this);
 
 }', data = tracks$geojson[[1]])
+```
 
+<<<<<<< HEAD
+=======
+```{r}
+>>>>>>> a1e2b6fd6c674cfed8d336423103ff47df9cc1ee
 m %>% addLayersControl(position = 'bottomright',
                          baseGroups = c("Topograafiline", 
                                         "Sõiduteed", 
