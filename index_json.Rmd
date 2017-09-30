@@ -3,7 +3,7 @@ title: "Using elevation plugin with R leaflet"
 output: html_document
 ---
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.2/d3.min.js" charset="utf-8"></script>
+<script src="inst/htmlwidgets/lib/d3/d3.js" type="text/javascript" charset="utf-8"></script>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = T)
@@ -41,6 +41,8 @@ tracks$trip  <- c("Geilo-Nedra Grøndalsvatne (Rallarvegen)",
 
 tracks <- mutate(tracks, gpx_df = map(gpx_df, ~select(.x, lon, lat, ele)))
 tracks <- mutate(tracks, bb = map(gpx_df, ~summarise_at(.x, c("lon", "lat"), c("min", "max"))))
+
+## Convert to json
 tracks <- mutate(tracks, coordinates = map(gpx_df, ~toJSON(.x, dataframe = "values")))
 tracks <- mutate(tracks, geojson = sprintf('{"type":"Feature","geometry":{"type":"LineString","coordinates":%s},"properties":null}', coordinates))
 tracks <- mutate(tracks, geojson = map(geojson, ~toJSON(fromJSON(.x), auto_unbox = T)))
@@ -50,12 +52,16 @@ library(geojsonlint)
 mutate(tracks, is_geojson = map_lgl(geojson, geojson_lint))$is_geojson
 ```
 
-
-```{r leaflet}
-
-# Thunderforest base url
-  thunderforest_link_template <- "https://{s}.tile.thunderforest.com/%s/{z}/{x}/{y}.png?apikey=%s"
+Thunderforest link template:
+```{r}
+thunderforest_link_template <- "https://{s}.tile.thunderforest.com/%s/{z}/{x}/{y}.png?apikey=%s"
 bb <- tracks$bb[[1]]
+```
+
+
+Leaflet base map:
+```{r leaflet}
+# Thunderforest base url
 m <- leaflet() %>%
   
   fitBounds(lng1 = bb[[1]], lat1 = bb[[2]], lng2 = bb[[3]], lat2 = bb[[4]]) %>%
@@ -67,11 +73,18 @@ m <- leaflet() %>%
     addProviderTiles("Stamen.Terrain", group = "Pinnavormid", options = providerTileOptions(detectRetina = T)) %>%
     addProviderTiles("OpenStreetMap.Mapnik", group = "Sõiduteed", options = providerTileOptions(detectRetina = T)) %>%
     addProviderTiles("Esri.WorldImagery", group = "Satelliit", options = providerTileOptions(detectRetina = T))
+```
 
+Javascript dependencies:
+```{r}
 elevationPlugin <- htmlDependency("Leaflet.elevation", "0.0.4",
       src = normalizePath("inst/htmlwidgets/lib/elevation/"),
       script = "leaflet.elevation-0.0.4.src.js",
       stylesheet = "leaflet.elevation-0.0.4.css")
+
+# d3Plugin <- htmlDependency("d3", "4.0",
+#                            src = normalizePath("inst/htmlwidgets/lib/d3/"),
+#                            script = "d3.js")
 
 # A function that takes a plugin htmlDependency object and adds
 # it to the map. This ensures that however or whenever the map
@@ -81,6 +94,9 @@ registerPlugin <- function(map, plugin) {
   map
 }
 
+```
+
+```{r}
 m <- m %>%
   # Register plugins on this map instance
   registerPlugin(elevationPlugin) %>%
@@ -100,26 +116,6 @@ m <- m %>%
 
 }', data = tracks$geojson[[1]])
 
-# # Add legend
-#   if(!is.null(trip)){
-#     m <- m %>% addLegend(position = 'bottomright', 
-#                          opacity = 0.4, 
-#                          colors = 'blue', 
-#                          labels = trip,
-#                          title = 'Norra 2017')}
-#   
-#   # Add photo markers
-#   if(!is.null(popupdata)){
-#     m <- m %>% addAwesomeMarkers(lng = popupdata$lon,
-#                                  lat = popupdata$lat,
-#                                  popup = popupdata$popup,
-#                                  popupOptions = popupOptions(closeButton = FALSE, 
-#                                                              maxWidth = 500,
-#                                                              closeOnClick = TRUE),
-#                                  icon = icon_fa_camera,
-#                                  group = 'Fotod')
-#   }
-
 m %>% addLayersControl(position = 'bottomright',
                          baseGroups = c("Topograafiline", 
                                         "Sõiduteed", 
@@ -132,6 +128,5 @@ m %>% addLayersControl(position = 'bottomright',
     
     # Add a fullscreen control button
     addFullscreenControl()
-
 ```
 
