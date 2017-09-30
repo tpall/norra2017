@@ -40,10 +40,9 @@ Niimoodi saan ma kasutada algseid andmeid ja jääb ära andmete vahepealne konv
 ### Kui on soov eri failides olevaid radasid ühendada
 Mõnel päeval salvestasin ma mitu träkki: näiteks enne lõunapausi ja peale lõunapausi.
 Liidan need träkid päevakaupa kokku.
-Selleks kasutan käsurea programmi `gpsbabel`, mille käivitamise ma pakendan R-i funktsiooni `merge_gpx`.
 
 Laadime vajalikud library-d ja kaks abifunktsiooni.
-```{r libraries}
+```{r libraries, message=FALSE}
 library(tidyverse)
 library(viridis)
 library(stringr)
@@ -58,7 +57,8 @@ source("lib/extract_date.R")
 
 Alustuseks moodustan gpx faili nimedest ja nende nimes olevatest kuupäevadest `data_frame`-i.
 Seejärel grupeerin failinimed kuupäevade järgi listidesse ja ühendan omavahel otsapidi iga kuupäeva päevateekonnad.
-Viimaks lisan legendi jaoks tabelisse ka 'käsitsi' kokku pandud päevateekondade algus- ja lõpppunktid.
+Lisan legendi jaoks tabelisse ka 'käsitsi' kokku pandud päevateekondade algus- ja lõpp-punktid.
+Lõpuks konverteerin dataframe-d json formaati.
 
 ```{r import-gpx-tracks}
 ## List gpx files in data folder
@@ -67,13 +67,13 @@ tracks <- data_frame(gpx_files = list.files("data/", full.names = T))
 tracks <- mutate(tracks, date = extract_date(gpx_files),
                  gpx_strings = map(gpx_files, read_file),
                  gpx_df = map(gpx_strings, tidy_gpx))
-
-tracks <- tracks %>%
+## Merge days tracks
+tracks_merged <- tracks %>%
   group_by(date) %>%
   do(gpx_df = bind_rows(.$gpx_df)) %>%
   ungroup()
-
-tracks$trip  <- c("Geilo-Nedra Grøndalsvatne (Rallarvegen)",
+## Add legend to tracks
+tracks_merged$trip  <- c("Geilo-Nedra Grøndalsvatne (Rallarvegen)",
                   "Nedra Grøndalsvatne-Voss-Dalavegen",
                   "Dalavegen-Stanghelle-Bergen (train)-Lyseklostervegen",
                   "Lyseklostervegen-Buavågen",
@@ -82,13 +82,19 @@ tracks$trip  <- c("Geilo-Nedra Grøndalsvatne (Rallarvegen)",
                   "Håra-Odda-Utne",
                   "Kvanndal-Voss")
 
-tracks <- mutate(tracks, gpx_df = map(gpx_df, ~select(.x, lon, lat, ele)))
-tracks <- mutate(tracks, bb = map(gpx_df, ~summarise_at(.x, c("lon", "lat"), c("min", "max"))))
+geojson_body <- '{"type":"Feature","geometry":{"type":"LineString","coordinates":%s},"properties":null}'
 
-## Convert to json
-tracks <- mutate(tracks, coordinates = map(gpx_df, ~toJSON(.x, dataframe = "values")))
-tracks <- mutate(tracks, geojson = sprintf('{"type":"Feature","geometry":{"type":"LineString","coordinates":%s},"properties":null}', coordinates))
-tracks <- mutate(tracks, geojson = map(geojson, ~toJSON(fromJSON(.x), auto_unbox = T)))
+## Drop time from tracks dataframes 
+## Calculate coordinates for boundingbox bb
+## Extract coordinates
+## add coordinates to geojson body
+## reformat geojson
+tracks_merged <- mutate(tracks_merged, 
+                        gpx_df = map(gpx_df, ~select(.x, lon, lat, ele)), 
+                        bb = map(gpx_df, ~summarise_at(.x, c("lon", "lat"), c("min", "max"))),
+                        coordinates = map(gpx_df, ~toJSON(.x, dataframe = "values")), 
+                        geojson = sprintf(geojson_body, coordinates), 
+                        geojson = map(geojson, ~toJSON(fromJSON(.x), auto_unbox = T)))
 ```
 
 
@@ -96,21 +102,15 @@ tracks <- mutate(tracks, geojson = map(geojson, ~toJSON(fromJSON(.x), auto_unbox
 
 Kasutades gpx kõrgusandmeid (`ele`) arvutame kui palju sai iga päev mäest ülesse ronitud ja kui palju alla lastud.
 ```{r ele, fig.cap="Summaarne päeva tõus ja laskumine.", dev='svg'}
-get_ascent_descent <- function(gpx){
-  ele <- xml2::as_xml_document(gpx) %>% 
-    xml2::xml_ns_strip() %>% 
-    xml2::xml_find_all("//ele") %>% 
-    xml2::xml_double()
-  ele_diffs <- diff(ele)
-  ascent <- ele_diffs[ele_diffs > 0] %>% sum()
-  descent <- ele_diffs[ele_diffs < 0] %>% sum() %>% abs
-  return(data_frame(ascent = ascent, descent = descent))
-}
+## Calculate daily asc and desc
+tracks_gat <- tracks_merged %>% 
+  mutate(ele = map(gpx_df, "ele"),
+         asc = map_dbl(ele, ~sum(diff(.x)[diff(.x)>0])),
+         desc = map_dbl(ele, ~abs(sum(diff(.x)[diff(.x)<0])))) %>% 
+  select(date, trip, asc, desc) %>% 
+  gather(key, value, asc, desc)
 
-tracks <- mutate(tracks, climbs = map(gpxstring, ~ get_ascent_descent(.x) %>% mutate_all(round))) %>% unnest(climbs)
-tracks_gat <- select(tracks, -gpxstring) %>% 
-  gather(key, value, ascent, descent)
-ggplot(tracks_gat, aes(paste(date, trip, sep = ", "), value, fill = key)) + 
+ggplot(tracks_gat, aes(str_wrap(paste(date, trip, sep = ", "), 30), value, fill = key)) + 
   geom_bar(stat = 'identity', position = 'dodge') +
   coord_flip() + 
   ylab("Summed value, meters") +
@@ -163,7 +163,7 @@ photos_location <- mutate(photos_location,
 # Nest data necessary to display photo on map into data_frame
 photos_location <- nest(photos_location, path, lat, lon, popup, .key = "popupdata")
 # Join photos data to tracks
-tracks <- left_join(tracks, photos_location)
+tracks_merged <- left_join(tracks_merged, photos_location)
 ```
 
 ## Päevateekonnad {.tabset .tabset-fade}
