@@ -31,6 +31,7 @@ track
 track <- track %>% select(lon, lat, ele)
 ## bounding box coordinates
 bb <- track %>% summarise_at(vars(lon, lat), funs(min, max))
+bb
 ```
 
 ```{r}
@@ -62,7 +63,7 @@ registerPlugin <- function(map, plugin) {
 ## Leaflet map
 ```{r}
 leaflet() %>% 
-  fitBounds(bb[[1]], bb[[2]], bb[[3]], bb[[4]]) %>%
+  fitBounds(bb$lon_min, bb$lat_min, bb$lon_max, bb$lat_max) %>%
   addProviderTiles(providers$Esri.NatGeoWorldMap) %>% 
   # Register plugins on this map instance
   registerPlugin(d3Plugin) %>% 
