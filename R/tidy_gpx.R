@@ -24,5 +24,5 @@ tidy_gpx <- function(gpxstring) {
   time <- readr::parse_datetime(time)
   
   # Create data_frame
-  dplyr::bind_cols(trkpt, tibble::tibble(ele, time))
+  dplyr::bind_cols(trkpt, dplyr::data_frame(ele, time))
 }
