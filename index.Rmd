@@ -1,0 +1,77 @@
+---
+title: "Minimal example using elevation plugin with R leaflet"
+output: html_document
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(message = FALSE)
+```
+
+
+```{r}
+library(dplyr)
+library(jsonlite)
+library(leaflet)
+library(htmlwidgets)
+library(htmltools)
+```
+
+
+## Import gpx track and convert to geojson
+
+```{r}
+source("R/tidy_gpx.R")
+## import gpx track
+track <- tidy_gpx("data/Move_2017_07_12_11_47_34_Cycling.gpx")
+track
+```
+
+```{r}
+## reorder columns
+track <- track %>% select(lon, lat, ele)
+## bounding box coordinates
+bb <- track %>% summarise_at(vars(lon, lat), funs(min, max))
+```
+
+```{r}
+## Convert to json
+track <- toJSON(track, dataframe = "values")
+geojson <- sprintf('{"type":"Feature","geometry":{"type":"LineString","coordinates":%s},"properties":null}', track)
+## unbox magic
+geojson <- toJSON(fromJSON(geojson), auto_unbox = TRUE)
+# Check if correct geojson objects
+geojsonlint::geojson_lint(geojson)
+```
+
+## Javascript dependencies
+```{r}
+elevationPlugin <- htmlDependency("Leaflet.elevation", "0.0.4",
+      src = "js/elevation/",
+      script = "leaflet.elevation-0.0.4.src.js",
+      stylesheet = "leaflet.elevation-0.0.4.css")
+d3Plugin <- htmlDependency("d3", "3.5.17",
+      src = "js/d3/",
+      script = "d3.js")
+registerPlugin <- function(map, plugin) {
+  map$dependencies <- c(map$dependencies, list(plugin))
+  map
+}
+```
+
+
+## Leaflet map
+```{r}
+leaflet() %>% 
+  fitBounds(bb[[1]], bb[[2]], bb[[3]], bb[[4]]) %>%
+  addProviderTiles(providers$Esri.NatGeoWorldMap) %>% 
+  # Register plugins on this map instance
+  registerPlugin(d3Plugin) %>% 
+  registerPlugin(elevationPlugin) %>%
+  # Add JS, `this` refers to the Leaflet map.
+  onRender('function(el, x, data) {
+          var elev = L.control.elevation({width: 300});
+              elev.addTo(this);
+          L.geoJson(data, {
+          onEachFeature: elev.addData.bind(elev)}).addTo(this);
+          }', data = geojson)
+```
